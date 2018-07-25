@@ -1,6 +1,9 @@
 .section .text
 .intel_syntax noprefix
 
+.data
+pc_tracker: 
+	.long 0    #declare a 32bit value to store the PC
 
 .extern rdv_LinkBlock
 .globl p_sh4rcb
@@ -93,7 +96,11 @@ ngen_mainloop:
 	push ebp
 	push ebx
 
-	mov ecx,0xA0000000
+	cmp dword ptr [pc_tracker], 0     #check to see if we have initialised before
+	mov ecx,0xA0000000                #First time entering this function. Init PC
+	mov ecx, dword ptr [pc_tracker]   #recover the last pc
+    
+
 	mov dword ptr cycle_counter, 448 #SH4_TIMESLICE
 
 	mov dword ptr loop_no_update,offset no_update
@@ -118,13 +125,16 @@ do_iter:
 	pop ecx
 	call rdv_DoInterrupts
 	mov ecx,eax
-   mov edx,[p_sh4rcb];
-   add edx,[cpurun_offset];
-   cmp dword ptr [edx],0;
+	mov edx,[p_sh4rcb];
+	add edx,[cpurun_offset];
+	cmp dword ptr [edx],0;
 	jz cleanup
 	jmp no_update
 
 cleanup:
+
+	mov dword ptr [pc_tracker], ecx #store the pc
+
 	pop ebx
 	pop ebp
 	pop edi
